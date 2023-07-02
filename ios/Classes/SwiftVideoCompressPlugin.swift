@@ -38,8 +38,8 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
             let path = args!["path"] as! String
             let quality = args!["quality"] as! NSNumber
             let deleteOrigin = args!["deleteOrigin"] as! Bool
-            let startTime = args!["startTime"] as? Double
-            let duration = args!["duration"] as? Double
+            let startTime = args!["startTime"] as? Int
+            let duration = args!["duration"] as? Int
             let includeAudio = args!["includeAudio"] as? Bool
             let frameRate = args!["frameRate"] as? Int
             compressVideo(path, quality, deleteOrigin, startTime, duration, includeAudio,
@@ -174,24 +174,24 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         return composition    
     }
     
-    private func compressVideo(_ path: String,_ quality: NSNumber,_ deleteOrigin: Bool,_ startTime: Double?,
-                               _ duration: Double?,_ includeAudio: Bool?,_ frameRate: Int?,
+    private func compressVideo(_ path: String, _ quality: NSNumber, _ deleteOrigin: Bool, _ startTime: Int?,
+                               _ duration: Int?, _ includeAudio: Bool?, _ frameRate: Int?,
                                _ result: @escaping FlutterResult) {
         let sourceVideoUrl = Utility.getPathUrl(path)
         let sourceVideoType = "mp4"
         
         let sourceVideoAsset = avController.getVideoAsset(sourceVideoUrl)
         let sourceVideoTrack = avController.getTrack(sourceVideoAsset)
-
+        
         let uuid = NSUUID()
         let compressionUrl =
-        Utility.getPathUrl("\(Utility.basePath())/\(Utility.getFileName(path))\(uuid.uuidString).\(sourceVideoType)")
-
+            Utility.getPathUrl("\(Utility.basePath())/\(Utility.getFileName(path))\(uuid.uuidString).\(sourceVideoType)")
+        
         let timescale = sourceVideoAsset.duration.timescale
         let minStartTime = Double(startTime ?? 0)
         
         let videoDuration = sourceVideoAsset.duration.seconds
-        let minDuration = Double(duration ?? videoDuration)
+        let minDuration = Double(duration ?? Int(videoDuration))
         let maxDurationTime = minStartTime + minDuration < videoDuration ? minDuration : videoDuration
         
         let cmStartTime = CMTimeMakeWithSeconds(minStartTime, preferredTimescale: timescale)
@@ -225,7 +225,7 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         
         exporter.exportAsynchronously(completionHandler: {
             timer.invalidate()
-            if(self.stopCommand) {
+            if self.stopCommand {
                 self.stopCommand = false
                 var json = self.getMediaInfoJson(path)
                 json["isCancel"] = true
@@ -240,8 +240,7 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
                     }
                     self.exporter = nil
                     self.stopCommand = false
-                }
-                catch let error as NSError {
+                } catch let error as NSError {
                     print(error)
                 }
             }
