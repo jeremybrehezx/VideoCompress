@@ -165,8 +165,8 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         let composition = AVMutableComposition()
         if !isIncludeAudio {
             let compressionVideoTrack = composition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: kCMPersistentTrackID_Invalid)
-            compressionVideoTrack!.preferredTransform = sourceVideoTrack.preferredTransform
-            try? compressionVideoTrack!.insertTimeRange(timeRange, of: sourceVideoTrack, at: CMTime.zero)
+            compressionVideoTrack?.preferredTransform = sourceVideoTrack.preferredTransform
+            try? compressionVideoTrack?.insertTimeRange(timeRange, of: sourceVideoTrack, at: CMTime.zero)
         } else {
             return sourceVideoTrack.asset!
         }
@@ -190,40 +190,38 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         var durationInSeconds = duration ?? Int(videoDuration)
 
         if startTimeInSeconds + durationInSeconds > videoDuration {
-            durationInSeconds = Int(videoDuration - startTimeInSeconds)
+            durationInSeconds = Int(videoDuration) - startTimeInSeconds
         }
 
-        let startTime = CMTimeMakeWithSeconds(Float64(startTimeInSeconds), preferredTimescale: timescale)
-        let endTime = CMTimeMakeWithSeconds(Float64(startTimeInSeconds + durationInSeconds), preferredTimescale: timescale)
+        let startTime = CMTime(seconds: Double(startTimeInSeconds), preferredTimescale: timescale)
+        let endTime = CMTime(seconds: Double(startTimeInSeconds + durationInSeconds), preferredTimescale: timescale)
 
-        let timeRange: CMTimeRange = CMTimeRangeMake(start: startTime, end: endTime)
+        let timeRange = CMTimeRange(start: startTime, duration: endTime)
 
         let isIncludeAudio = includeAudio ?? true
 
         let session = getComposition(isIncludeAudio, timeRange, sourceVideoTrack!)
-        
-        let exporter = AVAssetExportSession(asset: session, presetName: getExportPreset(quality))!
-        
-        exporter.outputURL = compressionUrl
-        exporter.outputFileType = AVFileType.mp4
-        exporter.shouldOptimizeForNetworkUse = true
-        
-        if frameRate != nil {
+
+        let exporter = AVAssetExportSession(asset: session, presetName: getExportPreset(quality))
+        exporter?.outputURL = compressionUrl
+        exporter?.outputFileType = AVFileType.mp4
+        exporter?.shouldOptimizeForNetworkUse = true
+
+        if let frameRate = frameRate {
             let videoComposition = AVMutableVideoComposition(propertiesOf: sourceVideoAsset)
-            videoComposition.frameDuration = CMTimeMake(value: 1, timescale: Int32(frameRate!))
-            exporter.videoComposition = videoComposition
+            videoComposition.frameDuration = CMTimeMake(value: 1, timescale: Int32(frameRate))
+            exporter?.videoComposition = videoComposition
         }
-        
+
         if !isIncludeAudio {
-            exporter.timeRange = timeRange
+            exporter?.timeRange = timeRange
         }
-        
+
         Utility.deleteFile(compressionUrl.absoluteString)
-        
-        let timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.updateProgress),
-                                         userInfo: exporter, repeats: true)
-        
-        exporter.exportAsynchronously(completionHandler: {
+
+        let timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.updateProgress(_:)), userInfo: exporter, repeats: true)
+
+        exporter?.exportAsynchronously(completionHandler: {
             timer.invalidate()
             if self.stopCommand {
                 self.stopCommand = false
