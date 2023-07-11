@@ -161,7 +161,7 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    private func getComposition(_ isIncludeAudio: Bool,_ timeRange: CMTimeRange, _ sourceVideoTrack: AVAssetTrack)->AVAsset {
+    private func getComposition(_ isIncludeAudio: Bool, _ timeRange: CMTimeRange, _ sourceVideoTrack: AVAssetTrack) -> AVAsset {
         let composition = AVMutableComposition()
         if !isIncludeAudio {
             let compressionVideoTrack = composition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: kCMPersistentTrackID_Invalid)
@@ -170,36 +170,36 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         } else {
             return sourceVideoTrack.asset!
         }
-        
-        return composition    
+        return composition
     }
-    
-    private func compressVideo(_ path: String, _ quality: NSNumber, _ deleteOrigin: Bool, _ startTime: Int?,
-                               _ duration: Int?, _ includeAudio: Bool?, _ frameRate: Int?,
-                               _ result: @escaping FlutterResult) {
+
+    private func compressVideo(_ path: String, _ quality: NSNumber, _ deleteOrigin: Bool, _ startTime: Int?, _ duration: Int?, _ includeAudio: Bool?, _ frameRate: Int?, _ result: @escaping FlutterResult) {
         let sourceVideoUrl = Utility.getPathUrl(path)
         let sourceVideoType = "mp4"
-        
+
         let sourceVideoAsset = avController.getVideoAsset(sourceVideoUrl)
         let sourceVideoTrack = avController.getTrack(sourceVideoAsset)
-        
+
         let uuid = NSUUID()
-        let compressionUrl =
-            Utility.getPathUrl("\(Utility.basePath())/\(Utility.getFileName(path))\(uuid.uuidString).\(sourceVideoType)")
-        
+        let compressionUrl = Utility.getPathUrl("\(Utility.basePath())/\(Utility.getFileName(path))\(uuid.uuidString).\(sourceVideoType)")
+
         let timescale = sourceVideoAsset.duration.timescale
-        let minStartTime = Double(startTime ?? 0)
-        
         let videoDuration = sourceVideoAsset.duration.seconds
-        let minDuration = Double(duration ?? Int(videoDuration))
-        let maxDurationTime = minStartTime + minDuration < videoDuration ? minDuration : videoDuration
-        
-        let cmStartTime = CMTimeMakeWithSeconds(minStartTime, preferredTimescale: timescale)
-        let cmDurationTime = CMTimeMakeWithSeconds(maxDurationTime, preferredTimescale: timescale)
-        let timeRange: CMTimeRange = CMTimeRangeMake(start: cmStartTime, duration: cmDurationTime)
-        
-        let isIncludeAudio = includeAudio != nil ? includeAudio! : true
-        
+
+        let startTimeInSeconds = startTime ?? 0
+        var durationInSeconds = duration ?? Int(videoDuration)
+
+        if startTimeInSeconds + durationInSeconds > videoDuration {
+            durationInSeconds = Int(videoDuration - startTimeInSeconds)
+        }
+
+        let startTime = CMTimeMakeWithSeconds(Float64(startTimeInSeconds), preferredTimescale: timescale)
+        let endTime = CMTimeMakeWithSeconds(Float64(startTimeInSeconds + durationInSeconds), preferredTimescale: timescale)
+
+        let timeRange: CMTimeRange = CMTimeRangeMake(start: startTime, end: endTime)
+
+        let isIncludeAudio = includeAudio ?? true
+
         let session = getComposition(isIncludeAudio, timeRange, sourceVideoTrack!)
         
         let exporter = AVAssetExportSession(asset: session, presetName: getExportPreset(quality))!
