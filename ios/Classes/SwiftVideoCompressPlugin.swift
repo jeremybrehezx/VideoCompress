@@ -189,14 +189,14 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         let startTimeInSeconds = startTime ?? 0
         var durationInSeconds = duration ?? Int(videoDuration)
 
-        if startTimeInSeconds + durationInSeconds > videoDuration {
+        if startTimeInSeconds + durationInSeconds > Int(videoDuration) {
             durationInSeconds = Int(videoDuration) - startTimeInSeconds
         }
 
         let startTime = CMTime(seconds: Double(startTimeInSeconds), preferredTimescale: timescale)
         let endTime = CMTime(seconds: Double(startTimeInSeconds + durationInSeconds), preferredTimescale: timescale)
 
-        let timeRange = CMTimeRange(start: startTime, duration: endTime)
+        let timeRange = CMTimeRange(start: startTime, end: endTime)
 
         let isIncludeAudio = includeAudio ?? true
 
@@ -219,7 +219,8 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
 
         Utility.deleteFile(compressionUrl.absoluteString)
 
-        let timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.updateProgress(_:)), userInfo: exporter, repeats: true)
+        let timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.updateProgress),
+                                        userInfo: exporter, repeats: true)
 
         exporter?.exportAsynchronously(completionHandler: {
             timer.invalidate()
